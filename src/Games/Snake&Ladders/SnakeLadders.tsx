@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,15 @@ const SnakeLadders: React.FC = () => {
   const [dice2Value, setDice2Value] = useState<number>(6);
   const [isDice1Rolling, setisDice1Rolling] = useState(false);
   const [isDice2Rolling, setisDice2Rolling] = useState(false);
-
+  const [isDiceRolling, setIsDiceRolling] = useState(false);
+  const [count, setcount] = useState(0);
+  // Add state variables to hold the position and color of the player who got bitten
+  const [snakeBitePosition, setSnakeBitePosition] = useState<number | null>(
+    null,
+  );
+  const [snakeBitePlayerColor, setSnakeBitePlayerColor] = useState<
+    string | null
+  >(null);
   const [winner, setWinner] = useState<number | null>(null);
   const playerColors = ['green', 'red'];
   const playerNames = ['Green', 'Red'];
@@ -34,6 +42,7 @@ const SnakeLadders: React.FC = () => {
   const playerAnimations = playerPositions.map(
     position => new Animated.Value(0),
   );
+
   // ------------------------------------------------
   // Define types for sound files
   interface SoundFiles {
@@ -94,37 +103,41 @@ const SnakeLadders: React.FC = () => {
   };
 
   // -------------------------------------------------------
-  const handleDiceRolling = (user: String) => {
-    playSound(`diceRolling`);
+  // Inside the SnakeLadders component
+  const handleDiceRolling =  (user: string) => {
     if (user === 'green') {
       setisDice1Rolling(true);
     } else {
       setisDice2Rolling(true);
     }
-    setTimeout(() => {
-      rollDice();
-    }, 1000);
+    rollDice();
   };
 
+  // todo:hello
+  // ---------------------------------------------------------------------------------------------
   // Function to handle dice roll
-  const rollDice = () => {
+  const rollDice = async () => {
+    playSound('diceRolling')
     if (winner !== null) return; // Don't roll dice if winner is declared
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const diceValue = Math.floor(Math.random() * 6) + 1;
-    console.log(
-      `Player ${currentPlayerIndex === 0 ? 'green' : 'red'}:`,
-      diceValue,
-    );
 
+    setcount(prev => prev + 1);
+
+    console.log(count);
     if (currentPlayerIndex === 0) {
-      setisDice1Rolling(false);
       setDice1Value(diceValue);
+      setisDice1Rolling(false);
+      console.log('Tushar');
     }
     if (currentPlayerIndex === 1) {
-      setisDice2Rolling(false);
       setDice2Value(diceValue);
+      setisDice2Rolling(false);
+      console.log('max');
     }
     const currentPosition = playerPositions[currentPlayerIndex];
     const remainingSteps = 100 - currentPosition;
+    console.log(remainingSteps);
 
     // Check if the player is at position 1 and rolled a number other than 6
     if (currentPosition === 1 && diceValue !== 6) {
@@ -161,9 +174,13 @@ const SnakeLadders: React.FC = () => {
       if (newPosition !== originalPosition && newPosition > originalPosition) {
         // Play ladder climbing sound
         playSound('ladderClimbing');
-      }
-      else if(newPosition !== originalPosition && newPosition < originalPosition){
-        playSound('SnakeBite')
+      } else if (
+        newPosition !== originalPosition &&
+        newPosition < originalPosition
+      ) {
+        playSound('SnakeBite');
+        const bittenPlayerColor = currentPlayerIndex === 0 ? 'green' : 'red';
+        // handleSnakeBite(newPosition, bittenPlayerColor);
       }
 
       const updatedPositions = [...playerPositions];
@@ -194,7 +211,17 @@ const SnakeLadders: React.FC = () => {
       }
     }
   };
-
+  // ------------------------------------------
+  // useEffect(() => {
+  //   if (isDice1Rolling || isDice2Rolling) {
+  //     setTimeout(() => {
+  //       rollDice();
+  //       setisDice1Rolling(false);
+  //       setisDice2Rolling(false);
+  //     }, 1000);
+  //   }
+  // }, [isDice1Rolling, isDice2Rolling]);
+  // ------------------------------------------------------
   // Function to check for ladder or snake
   const checkForLadderSnake = (position: number): number => {
     const ladders: {[key: number]: number} = {
@@ -353,7 +380,9 @@ const SnakeLadders: React.FC = () => {
             />
             <TouchableOpacity
               onPress={() => handleDiceRolling('green')}
-              disabled={currentPlayerIndex !== 0 && !isDice2Rolling}
+              disabled={
+                currentPlayerIndex !== 0 || isDice2Rolling || isDice1Rolling
+              }
               style={{
                 borderWidth: 1,
                 borderColor: currentPlayerIndex === 0 ? 'black' : 'transparent',
@@ -391,7 +420,9 @@ const SnakeLadders: React.FC = () => {
               ]}></View>
             <TouchableOpacity
               onPress={() => handleDiceRolling('red')}
-              disabled={currentPlayerIndex !== 1 && !isDice1Rolling}
+              disabled={
+                currentPlayerIndex !== 1 || isDice1Rolling || isDice2Rolling
+              }
               style={{
                 borderWidth: 1,
                 borderColor: currentPlayerIndex === 1 ? 'black' : 'transparent',
@@ -414,7 +445,18 @@ const SnakeLadders: React.FC = () => {
           </View>
         )}
       </View>
-
+      {snakeBitePosition !== null && snakeBitePlayerColor !== null && (
+        <Text
+          style={{
+            color: snakeBitePlayerColor,
+            fontWeight: 'bold',
+            position: 'absolute',
+            top: 40,
+          }}>
+          {snakeBitePlayerColor === 'green' ? 'Green' : 'Red'} player bitten by
+          snake at pos {snakeBitePosition}! Current: .
+        </Text>
+      )}
       {winner !== null && <Button title="Reset Game" onPress={resetGame} />}
     </View>
   );
