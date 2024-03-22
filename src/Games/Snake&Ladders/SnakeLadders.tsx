@@ -9,6 +9,7 @@ import {
   Easing,
   TouchableOpacity,
 } from 'react-native';
+import Sound from 'react-native-sound'; // Import the library
 import FastImage from 'react-native-fast-image';
 const SnakeLadders: React.FC = () => {
   const [playerPositions, setPlayerPositions] = useState<number[]>([1, 1]);
@@ -20,7 +21,7 @@ const SnakeLadders: React.FC = () => {
 
   const [winner, setWinner] = useState<number | null>(null);
   const playerColors = ['green', 'red'];
-  const playerNames = ['Player 1', 'Player 2'];
+  const playerNames = ['Green', 'Red'];
   const diceSide = [
     require('./assets/images/dice/dice1.jpeg'),
     require('./assets/images/dice/dice2.jpeg'),
@@ -33,8 +34,68 @@ const SnakeLadders: React.FC = () => {
   const playerAnimations = playerPositions.map(
     position => new Animated.Value(0),
   );
+  // ------------------------------------------------
+  // Define types for sound files
+  interface SoundFiles {
+    [key: string]: Sound;
+  }
 
+  // Load the sound files
+  const soundFiles: SoundFiles = {
+    diceRolling: new Sound(
+      require('./assets/sounds/diceRolling.mp3'),
+      Sound.MAIN_BUNDLE,
+      error => {
+        if (error) {
+          console.log('failed to load the sound', error);
+          return;
+        }
+      },
+    ),
+    ladderClimbing: new Sound(
+      require('./assets/sounds/ladderClimbing.mp3'),
+      Sound.MAIN_BUNDLE,
+      error => {
+        if (error) {
+          console.log('failed to load the sound', error);
+          return;
+        }
+      },
+    ),
+    SnakeBite: new Sound(
+      require('./assets/sounds/SnakeBite.mp3'),
+      Sound.MAIN_BUNDLE,
+      error => {
+        if (error) {
+          console.log('failed to load the sound', error);
+          return;
+        }
+      },
+    ),
+  };
+
+  // Define type for playSound function
+  type PlaySoundFunction = (soundName: keyof SoundFiles) => void;
+
+  const playSound: PlaySoundFunction = soundName => {
+    const soundFile = soundFiles[soundName];
+    if (!soundFile) {
+      console.error(`Sound file '${soundName}' not found`);
+      return;
+    }
+
+    soundFile.play(success => {
+      if (success) {
+        console.log('successfully finished playing');
+      } else {
+        console.log('playback failed due to audio decoding errors');
+      }
+    });
+  };
+
+  // -------------------------------------------------------
   const handleDiceRolling = (user: String) => {
+    playSound(`diceRolling`);
     if (user === 'green') {
       setisDice1Rolling(true);
     } else {
@@ -50,7 +111,7 @@ const SnakeLadders: React.FC = () => {
     if (winner !== null) return; // Don't roll dice if winner is declared
     const diceValue = Math.floor(Math.random() * 6) + 1;
     console.log(
-      `Player ${currentPlayerIndex === 0 ? 'Tushar' : 'Max'}:`,
+      `Player ${currentPlayerIndex === 0 ? 'green' : 'red'}:`,
       diceValue,
     );
 
@@ -96,6 +157,14 @@ const SnakeLadders: React.FC = () => {
       // Apply ladder logic
       const originalPosition = newPosition;
       newPosition = checkForLadderSnake(newPosition);
+      // Check if the player has climbed a ladder
+      if (newPosition !== originalPosition && newPosition > originalPosition) {
+        // Play ladder climbing sound
+        playSound('ladderClimbing');
+      }
+      else if(newPosition !== originalPosition && newPosition < originalPosition){
+        playSound('SnakeBite')
+      }
 
       const updatedPositions = [...playerPositions];
       updatedPositions[currentPlayerIndex] = newPosition;
@@ -178,8 +247,8 @@ const SnakeLadders: React.FC = () => {
   const resetGame = () => {
     setPlayerPositions([1, 1]);
     setCurrentPlayerIndex(0);
-    setDice1Value(0);
-    setDice2Value(0);
+    setDice1Value(6);
+    setDice2Value(6);
     setWinner(null);
   };
 
@@ -257,8 +326,6 @@ const SnakeLadders: React.FC = () => {
           {/* Render player tokens */}
         </View>
       </View>
-      <Text style={{color: 'white'}}>Tushar Dice:{dice1Value}</Text>
-      <Text style={{color: 'white'}}>Max Dice: {dice2Value}</Text>
       {winner !== null && (
         <Text style={{color: 'white'}}>{playerNames[winner]} wins!</Text>
       )}
