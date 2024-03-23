@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -81,6 +81,16 @@ const SnakeLadders: React.FC = () => {
         }
       },
     ),
+    Success: new Sound(
+      require('./assets/sounds/success.mp3'),
+      Sound.MAIN_BUNDLE,
+      error => {
+        if (error) {
+          console.log('failed to load the sound', error);
+          return;
+        }
+      },
+    ),
   };
 
   // Define type for playSound function
@@ -104,20 +114,20 @@ const SnakeLadders: React.FC = () => {
 
   // -------------------------------------------------------
   // Inside the SnakeLadders component
-  const handleDiceRolling =  (user: string) => {
+  const handleDiceRolling = async (user: string) => {
     if (user === 'green') {
       setisDice1Rolling(true);
     } else {
       setisDice2Rolling(true);
     }
-    rollDice();
+    await rollDice(); // Wait for the dice roll to complete
   };
 
-  // todo:hello
+  // todo: BUG: after a few seconds of playing  the dice logic stops working correctly
   // ---------------------------------------------------------------------------------------------
   // Function to handle dice roll
   const rollDice = async () => {
-    playSound('diceRolling')
+    playSound('diceRolling');
     if (winner !== null) return; // Don't roll dice if winner is declared
     await new Promise(resolve => setTimeout(resolve, 1000));
     const diceValue = Math.floor(Math.random() * 6) + 1;
@@ -128,16 +138,13 @@ const SnakeLadders: React.FC = () => {
     if (currentPlayerIndex === 0) {
       setDice1Value(diceValue);
       setisDice1Rolling(false);
-      console.log('Tushar');
     }
     if (currentPlayerIndex === 1) {
       setDice2Value(diceValue);
       setisDice2Rolling(false);
-      console.log('max');
     }
     const currentPosition = playerPositions[currentPlayerIndex];
     const remainingSteps = 100 - currentPosition;
-    console.log(remainingSteps);
 
     // Check if the player is at position 1 and rolled a number other than 6
     if (currentPosition === 1 && diceValue !== 6) {
@@ -198,6 +205,7 @@ const SnakeLadders: React.FC = () => {
         );
         // Declare the winning player
         setWinner(winningPlayerIndex);
+        playSound('Success');
       } else {
         // Check if the player rolled a 6 or climbed a ladder
         if (diceValue === 6 || newPosition > originalPosition) {
@@ -212,16 +220,7 @@ const SnakeLadders: React.FC = () => {
     }
   };
   // ------------------------------------------
-  // useEffect(() => {
-  //   if (isDice1Rolling || isDice2Rolling) {
-  //     setTimeout(() => {
-  //       rollDice();
-  //       setisDice1Rolling(false);
-  //       setisDice2Rolling(false);
-  //     }, 1000);
-  //   }
-  // }, [isDice1Rolling, isDice2Rolling]);
-  // ------------------------------------------------------
+
   // Function to check for ladder or snake
   const checkForLadderSnake = (position: number): number => {
     const ladders: {[key: number]: number} = {
@@ -327,9 +326,9 @@ const SnakeLadders: React.FC = () => {
                         styles.player,
                         {
                           backgroundColor: playerColors[playerIndex],
-                          left: '20%',
+                          left: '12%',
                           bottom: '50%',
-                          borderWidth: 2,
+                          borderWidth: 3,
                           borderColor: 'white',
                           transform: [
                             {
@@ -385,7 +384,7 @@ const SnakeLadders: React.FC = () => {
               }
               style={{
                 borderWidth: 1,
-                borderColor: currentPlayerIndex === 0 ? 'black' : 'transparent',
+                // borderColor: currentPlayerIndex === 0 ? 'black' : 'transparent',
                 borderRadius: 4,
                 opacity: currentPlayerIndex === 0 && !isDice2Rolling ? 1 : 0.3,
               }}>
@@ -425,7 +424,7 @@ const SnakeLadders: React.FC = () => {
               }
               style={{
                 borderWidth: 1,
-                borderColor: currentPlayerIndex === 1 ? 'black' : 'transparent',
+                // borderColor: currentPlayerIndex === 1 ? 'black' : 'transparent',
                 borderRadius: 4,
                 opacity: currentPlayerIndex === 1 && !isDice1Rolling ? 1 : 0.3,
               }}>
@@ -495,7 +494,7 @@ const styles = StyleSheet.create({
   },
   player: {
     position: 'absolute',
-    width: '45%',
+    width: '55%',
     aspectRatio: 1,
     borderRadius: 30,
     zIndex: 100,
