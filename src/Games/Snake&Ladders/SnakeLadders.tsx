@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -117,24 +117,34 @@ const SnakeLadders: React.FC = () => {
   const handleDiceRolling = async (user: string) => {
     if (user === 'green') {
       setisDice1Rolling(true);
+      console.log("Green");
+
     } else {
       setisDice2Rolling(true);
+      console.log("RED");
+
     }
-    await rollDice(); // Wait for the dice roll to complete
+    console.log("START RollDice");
+
+    await rollDice(); // Properly await rollDice function
   };
 
   // todo: BUG: after a few seconds of playing  the dice logic stops working correctly
   // ---------------------------------------------------------------------------------------------
   // Function to handle dice roll
   const rollDice = async () => {
-    playSound('diceRolling');
-    if (winner !== null) return; // Don't roll dice if winner is declared
+    // playSound('diceRolling');
+    if (winner !== null) {
+      console.log('Game already has a winner. Dice roll ignored.');
+      return; // Don't roll dice if winner is declared
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     const diceValue = Math.floor(Math.random() * 6) + 1;
 
     setcount(prev => prev + 1);
+    console.log("count", count);
+    console.log(`Dice rolled: ${diceValue}`);
 
-    console.log(count);
     if (currentPlayerIndex === 0) {
       setDice1Value(diceValue);
       setisDice1Rolling(false);
@@ -145,9 +155,12 @@ const SnakeLadders: React.FC = () => {
     }
     const currentPosition = playerPositions[currentPlayerIndex];
     const remainingSteps = 100 - currentPosition;
+    console.log("currentPosition:", currentPosition);
+    console.log("remainingSteps:", remainingSteps);
 
     // Check if the player is at position 1 and rolled a number other than 6
     if (currentPosition === 1 && diceValue !== 6) {
+      console.log("Player is at position 1 and didn't roll a 6. Skipping turn.");
       // If the player is at position 1 and did not roll a 6, they cannot move
       // Move to the next player's turn
       setCurrentPlayerIndex((currentPlayerIndex + 1) % playerPositions.length);
@@ -156,6 +169,7 @@ const SnakeLadders: React.FC = () => {
 
     // Check if the player is standing on position 96 and rolled a number greater than the remaining steps
     if (currentPosition >= 95 && diceValue > remainingSteps) {
+      console.log("Player is frozen. Skipping turn.");
       // Player is frozen, do not move
       setCurrentPlayerIndex((currentPlayerIndex + 1) % playerPositions.length);
     } else {
@@ -164,12 +178,14 @@ const SnakeLadders: React.FC = () => {
 
       // Check if the newPosition is beyond position 100
       if (newPosition > 100) {
+        console.log("Player overshoots position 100. Adjusting position.");
         // If the newPosition is beyond 100, adjust it to prevent overshooting
         newPosition = 100 - (newPosition - 100);
       }
 
       // Check if the player is in a position where they need an exact number to reach 100
       if (currentPosition >= 96 && newPosition > 100) {
+        console.log("Player needs exact number to reach 100. Restricting movement.");
         // If so, restrict the movement to only allow the exact number needed to reach 100
         newPosition = 100;
       }
@@ -177,15 +193,19 @@ const SnakeLadders: React.FC = () => {
       // Apply ladder logic
       const originalPosition = newPosition;
       newPosition = checkForLadderSnake(newPosition);
+      console.log("newPosition:", newPosition);
+
       // Check if the player has climbed a ladder
       if (newPosition !== originalPosition && newPosition > originalPosition) {
+        console.log("Player climbed a ladder!");
         // Play ladder climbing sound
-        playSound('ladderClimbing');
+        // playSound('ladderClimbing');
       } else if (
         newPosition !== originalPosition &&
         newPosition < originalPosition
       ) {
-        playSound('SnakeBite');
+        console.log("Player got bitten by a snake!");
+        // playSound('SnakeBite');
         const bittenPlayerColor = currentPlayerIndex === 0 ? 'green' : 'red';
         // handleSnakeBite(newPosition, bittenPlayerColor);
       }
@@ -196,6 +216,7 @@ const SnakeLadders: React.FC = () => {
       // Animate player movement
       animatePlayerMovement(currentPlayerIndex, newPosition);
       setPlayerPositions(updatedPositions);
+      console.log("updatedPositions:", updatedPositions);
 
       // Check if any player has reached position 100
       if (updatedPositions.some(position => position >= 100)) {
@@ -203,12 +224,14 @@ const SnakeLadders: React.FC = () => {
         const winningPlayerIndex = updatedPositions.findIndex(
           position => position >= 100,
         );
+        console.log(`Player ${playerNames[winningPlayerIndex]} wins!`);
         // Declare the winning player
         setWinner(winningPlayerIndex);
         playSound('Success');
       } else {
         // Check if the player rolled a 6 or climbed a ladder
         if (diceValue === 6 || newPosition > originalPosition) {
+          console.log("Player rolled a 6 or climbed a ladder. Another chance.");
           // If the player rolled a 6 or climbed a ladder, give them another chance
           return;
         }
@@ -216,14 +239,26 @@ const SnakeLadders: React.FC = () => {
         setCurrentPlayerIndex(
           (currentPlayerIndex + 1) % playerPositions.length,
         );
+        console.log("rollDice execution END");
+
       }
     }
   };
   // ------------------------------------------
+  useEffect(() => {
+    console.log("currentPlayerIndex:", currentPlayerIndex);
+    console.log("---------------------------------------------------------");
 
+  }, [currentPlayerIndex])
+  useEffect(() => {
+    // Cleanup animations when component unmounts
+    return () => {
+      playerAnimations.forEach(animation => animation.stopAnimation());
+    };
+  }, [playerAnimations]);
   // Function to check for ladder or snake
   const checkForLadderSnake = (position: number): number => {
-    const ladders: {[key: number]: number} = {
+    const ladders: { [key: number]: number } = {
       4: 56,
       12: 50,
       14: 55,
@@ -231,7 +266,7 @@ const SnakeLadders: React.FC = () => {
       41: 79,
       54: 88,
     };
-    const snakes: {[key: number]: number} = {
+    const snakes: { [key: number]: number } = {
       96: 42,
       94: 71,
       75: 32,
@@ -280,6 +315,8 @@ const SnakeLadders: React.FC = () => {
 
   // Generate numbers from 100 to 1, with every second row reversed
   const generateNumbers = (): number[] => {
+    console.log("generate");
+    
     const rows = [];
     for (let i = 0; i < 10; i++) {
       const row = [];
@@ -296,7 +333,35 @@ const SnakeLadders: React.FC = () => {
     }
     return rows.flat();
   };
+  const numbers = useMemo(() => generateNumbers(), []);
 
+  // Memoize the animated player views
+  const animatedPlayerViews = useMemo(() => {
+    return playerPositions.map((position, playerIndex) => (
+      <Animated.View
+        key={playerIndex}
+        style={[
+          styles.player,
+          {
+            backgroundColor: playerColors[playerIndex],
+            left: '12%',
+            bottom: '50%',
+            borderWidth: 3,
+            borderColor: 'white',
+            transform: [
+              {
+                translateY: playerAnimations[playerIndex].interpolate({
+                  inputRange: [0, 100],
+                  outputRange: [0, 90], // Adjust the output range based on your board layout
+                }),
+              },
+            ],
+            marginLeft: playerIndex * 10, // Adjust the marginLeft based on the number of players to prevent overlapping
+          },
+        ]}
+      />
+    ));
+  }, [playerPositions]);
   return (
     <View style={styles.container}>
       <View
@@ -310,11 +375,11 @@ const SnakeLadders: React.FC = () => {
         <Image
           source={require('./assets/images/snakesBoard.png')}
           resizeMode="stretch"
-          style={{position: 'absolute', height: '100%', width: '100%'}}
+          style={{ position: 'absolute', height: '100%', width: '100%' }}
         />
         <View style={styles.board}>
           {/* Render the board with 100 squares */}
-          {generateNumbers().map((number, index) => (
+          {numbers.map((number, index) => (
             <View key={index} style={[styles.square]}>
               {/* Only render the player token if the index matches the player's position */}
               {playerPositions.map((position, playerIndex) => {
@@ -353,7 +418,7 @@ const SnakeLadders: React.FC = () => {
         </View>
       </View>
       {winner !== null && (
-        <Text style={{color: 'white'}}>{playerNames[winner]} wins!</Text>
+        <Text style={{ color: 'white' }}>{playerNames[winner]} wins!</Text>
       )}
       <View
         style={{
@@ -364,7 +429,7 @@ const SnakeLadders: React.FC = () => {
           paddingHorizontal: 20,
         }}>
         {winner === null && (
-          <View style={{display: 'flex', flexDirection: 'row'}}>
+          <View style={{ display: 'flex', flexDirection: 'row' }}>
             <View
               style={[
                 {
@@ -391,12 +456,12 @@ const SnakeLadders: React.FC = () => {
               {!isDice1Rolling ? (
                 <Image
                   source={diceSide[dice1Value - 1]}
-                  style={{height: 34, width: 34}}
+                  style={{ height: 34, width: 34 }}
                 />
               ) : (
                 <FastImage
                   resizeMode="contain"
-                  style={{width: 34, height: 34}}
+                  style={{ width: 34, height: 34 }}
                   source={require('./assets/images/dice/Dice.gif')}
                 />
               )}
@@ -405,7 +470,7 @@ const SnakeLadders: React.FC = () => {
         )}
 
         {winner === null && (
-          <View style={{display: 'flex', flexDirection: 'row'}}>
+          <View style={{ display: 'flex', flexDirection: 'row' }}>
             <View
               style={[
                 {
@@ -431,12 +496,12 @@ const SnakeLadders: React.FC = () => {
               {!isDice2Rolling ? (
                 <Image
                   source={diceSide[dice2Value - 1]}
-                  style={{height: 34, width: 34}}
+                  style={{ height: 34, width: 34 }}
                 />
               ) : (
                 <FastImage
                   resizeMode="contain"
-                  style={{width: 34, height: 34}}
+                  style={{ width: 34, height: 34 }}
                   source={require('./assets/images/dice/Dice.gif')}
                 />
               )}
